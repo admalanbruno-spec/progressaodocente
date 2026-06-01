@@ -1,0 +1,1410 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  Clock, 
+  AlertTriangle, 
+  CheckCircle, 
+  Mail, 
+  FileText, 
+  ChevronRight, 
+  User, 
+  Sliders, 
+  Download, 
+  Trash2, 
+  Plus, 
+  Info,
+  Sparkles,
+  Bell,
+  Search,
+  Check,
+  UserCheck,
+  Database,
+  PlusCircle,
+  Lock,
+  Unlock,
+  X
+} from 'lucide-react';
+
+// Criando um ícone Briefcase em SVG inline para evitar erros de importação
+const BriefcaseIcon = ({ size = 24, className = "" }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    <rect width="20" height="14" x="2" y="6" rx="2" />
+  </svg>
+);
+
+// Estrutura de classes e níveis da Carreira EBTT (Ensino Básico, Técnico e Tecnológico)
+const CLASSES_NIVEIS = [
+  { id: 'A1', classe: 'Classe A', nivel: 'Nível 1', codigoFormatado: 'A-1', cargo: 'Adjunto A' },
+  { id: 'A2', classe: 'Classe A', nivel: 'Nível 2', codigoFormatado: 'A-2', cargo: 'Adjunto A' },
+  { id: 'B1', classe: 'Classe B', nivel: 'Nível 1', codigoFormatado: 'B-1', cargo: 'Assistente B' },
+  { id: 'B2', classe: 'Classe B', nivel: 'Nível 2', codigoFormatado: 'B-2', cargo: 'Assistente B' },
+  { id: 'B3', classe: 'Classe B', nivel: 'Nível 3', codigoFormatado: 'B-3', cargo: 'Assistente B' },
+  { id: 'B4', classe: 'Classe B', nivel: 'Nível 4', codigoFormatado: 'B-4', cargo: 'Assistente B' },
+  { id: 'C1', classe: 'Classe C', nivel: 'Nível 1', codigoFormatado: 'C-1', cargo: 'Adjunto C' },
+  { id: 'C2', classe: 'Classe C', nivel: 'Nível 2', codigoFormatado: 'C-2', cargo: 'Adjunto C' },
+  { id: 'C3', classe: 'Classe C', nivel: 'Nível 3', codigoFormatado: 'C-3', cargo: 'Adjunto C' },
+  { id: 'C4', classe: 'Classe C', nivel: 'Nível 4', codigoFormatado: 'C-4', cargo: 'Adjunto C' },
+  { id: 'D1', classe: 'Classe D', nivel: 'Nível 1', codigoFormatado: 'D-1', cargo: 'Associado D' },
+  { id: 'D2', classe: 'Classe D', nivel: 'Nível 2', codigoFormatado: 'D-2', cargo: 'Associado D' },
+  { id: 'D3', pointerEvents: 'none', classe: 'Classe D', nivel: 'Nível 3', codigoFormatado: 'D-3', cargo: 'Associado D' },
+  { id: 'D4', classe: 'Classe D', nivel: 'Nível 4', codigoFormatado: 'D-4', cargo: 'Associado D' },
+  { id: 'E1', classe: 'Classe E (Titular)', nivel: 'Nível Único', codigoFormatado: 'E-1', cargo: 'Titular' },
+];
+
+// Base de dados inicial de servidores docentes ativos
+const BASE_INICIAL_DOCENTES = [
+  {
+    siape: '1543289',
+    nome: 'Carlos Eduardo Souza Silva',
+    classeNivelAtual: 'A2',
+    dataUltimoEvento: '2023-08-15',
+    possuiDoutorado: false,
+    descontos: []
+  },
+  {
+    siape: '2345671',
+    nome: 'Maria de Fátima dos Santos',
+    classeNivelAtual: 'B4',
+    dataUltimoEvento: '2024-02-10',
+    possuiDoutorado: true,
+    descontos: [
+      { id: 1, tipo: 'VIII', dias: 8, descricao: 'Faltas não justificadas em período letivo' }
+    ]
+  },
+  {
+    siape: '3456782',
+    nome: 'Ana Beatris Costa Medeiros',
+    classeNivelAtual: 'D4',
+    dataUltimoEvento: '2024-05-20',
+    possuiDoutorado: true,
+    descontos: []
+  },
+  {
+    siape: '1892345',
+    nome: 'João Alfredo de Oliveira',
+    classeNivelAtual: 'D4',
+    dataUltimoEvento: '2024-04-12',
+    possuiDoutorado: false,
+    descontos: []
+  },
+  {
+    siape: '2567893',
+    nome: 'Patrícia Roberta Lima Moura',
+    classeNivelAtual: 'C2',
+    dataUltimoEvento: '2024-01-15',
+    possuiDoutorado: true,
+    descontos: [
+      { id: 2, tipo: 'VII', dias: 45, descricao: 'Licença sem vencimentos para interesse particular' }
+    ]
+  }
+];
+
+export default function App() {
+  // Estado de Autenticação Administrativa
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [senhaDigitada, setSenhaDigitada] = useState('');
+  const [erroLogin, setErroLogin] = useState('');
+
+  // Estado da Base de Dados de Docentes (pode ser alimentada dinamicamente)
+  const [bancoDocentes, setBancoDocentes] = useState(BASE_INICIAL_DOCENTES);
+
+  // Estado de Busca
+  const [busca, setBusca] = useState('');
+  const [docenteSelecionado, setDocenteSelecionado] = useState(null);
+  const [sugestoes, setSugestoes] = useState([]);
+
+  // Estado do Servidor Ativo (carregado a partir da busca)
+  const [nome, setNome] = useState('');
+  const [siape, setSiape] = useState('');
+  const [classeNivelAtual, setClasseNivelAtual] = useState('A1');
+  const [dataUltimoEvento, setDataUltimoEvento] = useState('');
+  const [possuiDoutorado, setPossuiDoutorado] = useState(false);
+  const [descontos, setDescontos] = useState([]);
+
+  // Estado para Cadastro de Novo Docente no Banco de Dados
+  const [cadNome, setCadNome] = useState('');
+  const [cadSiape, setCadSiape] = useState('');
+  const [cadClasseNivel, setCadClasseNivel] = useState('A1');
+  const [cadDataEvento, setCadDataEvento] = useState('');
+  const [cadDoutorado, setCadDoutorado] = useState(false);
+
+  // Estado de novos Descontos Simulado
+  const [novoDescontoTipo, setNovoDescontoTipo] = useState('VII');
+  const [novoDescontoDias, setNovoDescontoDias] = useState('');
+  const [novoDescontoDescricao, setNovoDescontoDescricao] = useState('');
+
+  // Estado dos Alertas
+  const [receberAlerta, setReceberAlerta] = useState(false);
+  const [emailAlerta, setEmailAlerta] = useState('');
+  const [alertaConfigurado, setAlertaConfigurado] = useState(false);
+  
+  // Estados de Exibição de Resultados e UI
+  const [abaAtiva, setAbaAtiva] = useState('calculadora');
+  const [mostrarToast, setMostrarToast] = useState(false);
+  const [toastMensagem, setToastMensagem] = useState('');
+
+  // Tipos de afastamentos regulados pelo Artigo 14
+  const TIPOS_DESCONTO = {
+    'I': { label: 'Exercício em outros cargos efetivos/comissionados não concomitantes', defaultDias: 30 },
+    'II': { label: 'Contratado temporário (Lei 8.745/93)', defaultDias: 60 },
+    'III': { label: 'Período em emprego público', defaultDias: 90 },
+    'IV': { label: 'Serviço militar prestado às forças armadas (exceções art. 100)', defaultDias: 180 },
+    'V': { label: 'Período de disponibilidade', defaultDias: 45 },
+    'VI': { label: 'Afastamento por segurança disciplinar ou preventiva', defaultDias: 15 },
+    'VII': { label: 'Afastamento por usufruto de licença não remunerada', defaultDias: 365 },
+    'VIII': { label: 'Faltas não justificadas', defaultDias: 5 },
+  };
+
+  // Gerenciador de busca e sugestões em tempo real buscando do estado dinâmico bancoDocentes
+  useEffect(() => {
+    if (busca.trim().length > 0) {
+      const termo = busca.toLowerCase();
+      const filtrados = bancoDocentes.filter(
+        docente => 
+          docente.nome.toLowerCase().includes(termo) || 
+          docente.siape.includes(termo)
+      );
+      setSugestoes(filtrados);
+    } else {
+      setSugestoes([]);
+    }
+  }, [busca, bancoDocentes]);
+
+  const showToast = (msg) => {
+    setToastMensagem(msg);
+    setMostrarToast(true);
+    setTimeout(() => setMostrarToast(false), 4000);
+  };
+
+  // Retorna a string formatada do nível, ex: "A-2" ou "D-4"
+  const obterNivelFormatado = (classeId) => {
+    const correspondente = CLASSES_NIVEIS.find(cn => cn.id === classeId);
+    return correspondente ? correspondente.codigoFormatado : classeId;
+  };
+
+  // Trata o login de administrador
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    if (senhaDigitada === 'admin123') {
+      setIsAdmin(true);
+      setShowAdminModal(false);
+      setSenhaDigitada('');
+      setErroLogin('');
+      setAbaAtiva('admin_banco');
+      showToast('Acesso administrativo concedido!');
+    } else {
+      setErroLogin('Senha incorreta. Tente novamente ou use a dica.');
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    if (abaAtiva === 'admin_banco') {
+      setAbaAtiva('calculadora');
+    }
+    showToast('Sessão de administrador encerrada.');
+  };
+
+  // Carrega os dados do docente selecionado para a tela ativa
+  const selecionarDocente = (docente) => {
+    setDocenteSelecionado(docente);
+    setNome(docente.nome);
+    setSiape(docente.siape);
+    setClasseNivelAtual(docente.classeNivelAtual);
+    setDataUltimoEvento(docente.dataUltimoEvento);
+    setPossuiDoutorado(docente.possuiDoutorado);
+    setDescontos(docente.descontos || []);
+    setBusca('');
+    setSugestoes([]);
+    showToast(`Ficha de ${docente.nome} carregada com sucesso!`);
+  };
+
+  // Submete o cadastro de um novo docente adicionando-o ao estado ativo
+  const handleCadastrarDocente = (e) => {
+    e.preventDefault();
+    if (!cadNome.trim() || !cadSiape.trim() || !cadDataEvento) {
+      showToast('Por favor, preencha todos os campos obrigatórios do docente.');
+      return;
+    }
+    if (cadSiape.trim().length !== 7 || isNaN(cadSiape)) {
+      showToast('O SIAPE deve conter exatamente 7 dígitos numéricos.');
+      return;
+    }
+    // Verifica duplicidade
+    if (bancoDocentes.some(d => d.siape === cadSiape.trim())) {
+      showToast('Já existe um docente cadastrado com este número de SIAPE.');
+      return;
+    }
+
+    const novoDocente = {
+      nome: cadNome.trim(),
+      siape: cadSiape.trim(),
+      classeNivelAtual: cadClasseNivel,
+      dataUltimoEvento: cadDataEvento,
+      possuiDoutorado: cadDoutorado,
+      descontos: []
+    };
+
+    setBancoDocentes([...bancoDocentes, novoDocente]);
+    setCadNome('');
+    setCadSiape('');
+    setCadClasseNivel('A1');
+    setCadDataEvento('');
+    setCadDoutorado(false);
+    showToast('Docente cadastrado com sucesso na base de dados ativa!');
+  };
+
+  // Remove um docente cadastrado da base
+  const handleExcluirDocenteDoBanco = (siapeExcluir) => {
+    setBancoDocentes(bancoDocentes.filter(d => d.siape !== siapeExcluir));
+    if (docenteSelecionado && docenteSelecionado.siape === siapeExcluir) {
+      setDocenteSelecionado(null);
+    }
+    showToast('Docente removido da base de dados com sucesso.');
+  };
+
+  // Adicionar desconto de afastamento ao docente selecionado
+  const handleAdicionarDesconto = (e) => {
+    e.preventDefault();
+    if (!novoDescontoDias || isNaN(novoDescontoDias) || parseInt(novoDescontoDias) <= 0) {
+      showToast('Por favor, insira um número válido de dias.');
+      return;
+    }
+
+    const novo = {
+      id: Date.now(),
+      tipo: novoDescontoTipo,
+      dias: parseInt(novoDescontoDias),
+      descricao: novoDescontoDescricao || TIPOS_DESCONTO[novoDescontoTipo].label
+    };
+
+    const novosDescontos = [...descontos, novo];
+    setDescontos(novosDescontos);
+
+    // Atualiza também na lista do banco de dados principal
+    setBancoDocentes(bancoDocentes.map(d => {
+      if (d.siape === siape) {
+        return { ...d, descontos: novosDescontos };
+      }
+      return d;
+    }));
+
+    setNovoDescontoDias('');
+    setNovoDescontoDescricao('');
+    showToast('Simulação de afastamento adicionada. Data recalculada.');
+  };
+
+  const handleRemoverDesconto = (id) => {
+    const novosDescontos = descontos.filter(item => item.id !== id);
+    setDescontos(novosDescontos);
+
+    // Atualiza também na lista do banco de dados principal
+    setBancoDocentes(bancoDocentes.map(d => {
+      if (d.siape === siape) {
+        return { ...d, descontos: novosDescontos };
+      }
+      return d;
+    }));
+
+    showToast('Afastamento removido do cálculo.');
+  };
+
+  // Lógica matemática de cálculo baseada nos dados do docente
+  const calcularProgressao = () => {
+    if (!dataUltimoEvento) return null;
+
+    const dataBase = new Date(dataUltimoEvento);
+    if (isNaN(dataBase.getTime())) return null;
+
+    const indexAtual = CLASSES_NIVEIS.findIndex(c => c.id === classeNivelAtual);
+    if (indexAtual === -1) return null;
+
+    const atual = CLASSES_NIVEIS[indexAtual];
+    
+    // Se já for o último nível da carreira (Titular)
+    if (indexAtual === CLASSES_NIVEIS.length - 1) {
+      return {
+        ultimoNivel: true,
+        classeAtual: atual.classe,
+        nivelAtual: atual.nivel,
+        cargoAtual: atual.cargo,
+        codigoFormatado: atual.codigoFormatado
+      };
+    }
+
+    const proximo = CLASSES_NIVEIS[indexAtual + 1];
+    
+    // Configuração de meses baseado nos artigos legais fornecidos
+    let intersticioMeses = 24; 
+    let artigoAplicado = 'Art. 5º (Interstício padrão de 24 meses)';
+    let requisitosEspeciais = [];
+
+    if (classeNivelAtual === 'A2') {
+      intersticioMeses = 36;
+      artigoAplicado = 'Art. 6º (Promoção de Classe A para B)';
+      requisitosEspeciais.push('Cumprimento de 36 meses no último nível da Classe A.');
+      requisitosEspeciais.push('Aprovação em avaliação individual de desempenho.');
+    } else if (classeNivelAtual === 'B4') {
+      intersticioMeses = 24;
+      artigoAplicado = 'Art. 7º (Promoção de Classe B para C)';
+      requisitosEspeciais.push('Cumprimento de 24 meses no nível B4.');
+      requisitosEspeciais.push('Aprovação em avaliação individual de desempenho.');
+    } else if (classeNivelAtual === 'D4') {
+      intersticioMeses = 24;
+      artigoAplicado = 'Art. 8º (Promoção para Classe Titular)';
+      requisitosEspeciais.push('Possuir o título de Doutor.');
+      requisitosEspeciais.push('Cumprimento de interstício mínimo de 24 meses no nível D4.');
+      requisitosEspeciais.push('Aprovação em processo de avaliação de desempenho.');
+      requisitosEspeciais.push('Aprovação de memorial de atividades ou defesa de tese inédita.');
+      if (!possuiDoutorado) {
+        requisitosEspeciais.push('⚠️ ALERTA: O servidor não possui o título de doutor registrado. A promoção está suspensa até a titulação.');
+      }
+    } else {
+      requisitosEspeciais.push('Cumprimento de 24 meses em efetivo exercício.');
+      requisitosEspeciais.push('Aprovação em avaliação de desempenho individual.');
+    }
+
+    // Calcula data futura
+    const dataCalculada = new Date(dataBase);
+    dataCalculada.setMonth(dataCalculada.getMonth() + intersticioMeses);
+
+    // Aplica descontos de tempo (Art. 14)
+    let totalDiasDesconto = 0;
+    descontos.forEach(d => {
+      totalDiasDesconto += d.dias;
+    });
+
+    if (totalDiasDesconto > 0) {
+      dataCalculada.setDate(dataCalculada.getDate() + totalDiasDesconto);
+    }
+
+    // Alerta de 5 dias
+    const dataAlerta = new Date(dataCalculada);
+    dataAlerta.setDate(dataAlerta.getDate() - 5);
+
+    // Retorna strings formatadas para o JSX
+    return {
+      ultimoNivel: false,
+      classeAtual: atual.classe,
+      nivelAtual: atual.nivel,
+      cargoAtual: atual.cargo,
+      codigoFormatado: atual.codigoFormatado,
+      proximaClasse: proximo.classe,
+      proximoNivel: proximo.nivel,
+      proximoCargo: proximo.cargo,
+      proximoCodigoFormatado: proximo.codigoFormatado,
+      intersticioMeses,
+      artigoAplicado,
+      requisitosEspeciais,
+      totalDiasDesconto,
+      dataFinalFormatada: dataCalculada.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      dataFinalCurta: dataCalculada.toLocaleDateString('pt-BR'),
+      dataAlertaCurta: dataAlerta.toLocaleDateString('pt-BR'),
+      bloqueadoFaltaRequisitos: classeNivelAtual === 'D4' && !possuiDoutorado
+    };
+  };
+
+  const resultado = calcularProgressao();
+
+  const handleConfigurarAlerta = (e) => {
+    e.preventDefault();
+    if (!emailAlerta.trim()) {
+      showToast('Por favor, digite um e-mail válido.');
+      return;
+    }
+    setAlertaConfigurado(true);
+    showToast(`Configurado! Um lembrete será enviado para ${emailAlerta} com o formulário anexo.`);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
+      
+      {/* Toast de Notificação */}
+      {mostrarToast && (
+        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-3 border border-slate-700 max-w-sm">
+          <Sparkles className="text-emerald-400 shrink-0" size={18} />
+          <p className="text-sm font-medium">{toastMensagem}</p>
+        </div>
+      )}
+
+      {/* MODAL DE LOGIN DO ADMINISTRADOR */}
+      {showAdminModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 relative animate-fadeIn">
+            <button 
+              onClick={() => {
+                setShowAdminModal(false);
+                setErroLogin('');
+                setSenhaDigitada('');
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center space-y-3 mb-5">
+              <div className="p-3 bg-emerald-50 text-emerald-700 rounded-full">
+                <Lock size={24} />
+              </div>
+              <h3 className="font-extrabold text-slate-800 text-lg">Acesso Restrito ao Administrador</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Digite a chave administrativa para desbloquear a aba de cadastro e modificação de servidores.
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1.5">Senha de Acesso</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={senhaDigitada}
+                  onChange={(e) => setSenhaDigitada(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-250 focus:ring-2 focus:ring-emerald-500 text-sm focus:outline-hidden text-center bg-slate-50"
+                />
+                {erroLogin && (
+                  <p className="text-[11px] text-rose-600 mt-1.5 text-center font-medium">{erroLogin}</p>
+                )}
+              </div>
+
+              <div className="bg-slate-50 p-2 rounded-lg text-center border border-slate-150">
+                <span className="text-[10px] text-slate-400 block font-semibold">Chave de Demonstração</span>
+                <span className="font-mono text-xs text-emerald-700 font-bold">admin123</span>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg transition-colors text-xs flex items-center justify-center gap-1.5"
+              >
+                <Unlock size={14} /> Desbloquear Painel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cabeçalho Neutro */}
+      <header className="bg-gradient-to-r from-emerald-800 to-green-700 text-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
+              <BriefcaseIcon size={24} className="text-emerald-300" />
+              SISPRA-EBTT
+            </h1>
+            <p className="text-xs text-emerald-100 font-medium">Sistema de Gestão e Consulta de Progressão Funcional Docente</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* BOTÃO CONDICIONAL DE ADMINISTRAÇÃO */}
+            {!isAdmin ? (
+              <button 
+                onClick={() => setShowAdminModal(true)}
+                className="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-900 text-white text-xs px-3.5 py-2 rounded-lg transition-colors border border-slate-700/50 shadow-sm"
+              >
+                <Lock size={12} className="text-emerald-400" />
+                <span>Área do Admin</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] bg-emerald-900/60 border border-emerald-500/30 px-2.5 py-1 rounded-md text-emerald-300 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Modo Admin Ativo
+                </span>
+                <button 
+                  onClick={handleAdminLogout}
+                  className="flex items-center gap-1.5 bg-rose-700/90 hover:bg-rose-800 text-white text-xs px-3 py-1.5 rounded-md transition-colors"
+                >
+                  <Unlock size={12} />
+                  <span>Sair</span>
+                </button>
+              </div>
+            )}
+            
+            <div className="hidden sm:flex items-center gap-2 bg-emerald-900/40 px-3 py-1.5 rounded-md border border-emerald-600/30 text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Consulta Ficha Funcional Integrada & Base Cadastrada</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Menu de Abas */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-1 py-2 overflow-x-auto">
+            <button
+              onClick={() => setAbaAtiva('calculadora')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all shrink-0 ${
+                abaAtiva === 'calculadora'
+                  ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Sliders size={18} />
+              Minha Progressão
+            </button>
+            
+            {/* ABA ADMINISTRATIVA CONDICIONAL AO LOGIN DO ADMIN */}
+            {isAdmin && (
+              <button
+                onClick={() => setAbaAtiva('admin_banco')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all shrink-0 ${
+                  abaAtiva === 'admin_banco'
+                    ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Database size={18} className="text-emerald-600 animate-bounce" />
+                Painel Administrativo
+              </button>
+            )}
+
+            <button
+              onClick={() => setAbaAtiva('regulamento')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all shrink-0 ${
+                abaAtiva === 'regulamento'
+                  ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <FileText size={18} />
+              Legislação e Requisitos
+            </button>
+            <button
+              onClick={() => setAbaAtiva('simulador_email')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all shrink-0 relative ${
+                abaAtiva === 'simulador_email'
+                  ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Mail size={18} />
+              Notificação & Formulário
+              {receberAlerta && (
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500"></span>
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Conteúdo Principal */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {/* ABA: CALCULADORA / SIMULADOR */}
+        {abaAtiva === 'calculadora' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Bloco de Busca de Servidores (Col 5) */}
+            <div className="lg:col-span-5 flex flex-col gap-6">
+              
+              {/* Painel de Identificação */}
+              <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6">
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
+                  <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg">
+                    <Search size={20} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg text-slate-800">Identificação do Docente</h2>
+                    <p className="text-xs text-slate-500">Insira seu Nome ou SIAPE para consultar</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Busca Integrada */}
+                  <div className="relative">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Nome do Servidor ou Matrícula SIAPE
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={busca}
+                        onChange={(e) => setBusca(e.target.value)}
+                        placeholder="Digite o nome ou os 7 dígitos do SIAPE..."
+                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-250 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-slate-50 focus:bg-white transition-all text-sm"
+                      />
+                      <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
+                    </div>
+
+                    {/* Menu flutuante de autocompletar sugestões */}
+                    {sugestoes.length > 0 && (
+                      <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-[220px] overflow-y-auto">
+                        {sugestoes.map((docente) => (
+                          <button
+                            key={docente.siape}
+                            onClick={() => selecionarDocente(docente)}
+                            className="w-full text-left px-4 py-2.5 hover:bg-emerald-50/70 border-b border-slate-100 transition-colors flex items-center justify-between text-xs"
+                          >
+                            <div>
+                              <span className="font-bold text-slate-800 block">{docente.nome}</span>
+                              <span className="text-slate-400 font-mono">
+                                SIAPE: {docente.siape} • Nível <strong className="font-bold text-emerald-700">{obterNivelFormatado(docente.classeNivelAtual)}</strong>
+                              </span>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-400" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Demonstração de Docentes para Testes Rápidos */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 block">Docentes no Banco ({bancoDocentes.length}):</span>
+                      {!isAdmin && (
+                        <button 
+                          onClick={() => setShowAdminModal(true)}
+                          className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-1"
+                        >
+                          <Lock size={10} /> Desbloquear Painel
+                        </button>
+                      )}
+                    </div>
+                    {bancoDocentes.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {bancoDocentes.slice(0, 4).map((d) => (
+                          <button
+                            key={d.siape}
+                            onClick={() => selecionarDocente(d)}
+                            className="bg-white border border-slate-200 hover:border-emerald-500 text-[11px] px-2 py-1 rounded-md text-slate-600 transition-all hover:text-emerald-700"
+                          >
+                            {d.nome.split(' ')[0]} (<strong className="font-extrabold">{obterNivelFormatado(d.classeNivelAtual)}</strong>)
+                          </button>
+                        ))}
+                        {bancoDocentes.length > 4 && (
+                          <span className="text-[10px] text-slate-400 self-center">+{bancoDocentes.length - 4} mais</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-rose-600 block">Base de dados vazia. Cadastre na área administrativa!</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Ficha Funcional Carregada */}
+              {docenteSelecionado && (
+                <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4 animate-fadeIn">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <UserCheck className="text-emerald-600" size={18} />
+                    <span className="font-bold text-sm text-slate-700">Ficha Funcional Ativa</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150">
+                      <span className="text-slate-400 block text-[9px] uppercase font-bold">Servidor</span>
+                      <span className="font-bold text-slate-700 block truncate">{nome}</span>
+                    </div>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150">
+                      <span className="text-slate-400 block text-[9px] uppercase font-bold">Siape</span>
+                      <span className="font-mono font-bold text-slate-700 block">{siape}</span>
+                    </div>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150">
+                      <span className="text-slate-400 block text-[9px] uppercase font-bold">Classe/Nível Atual</span>
+                      <span className="text-slate-700 block font-normal">
+                        {CLASSES_NIVEIS.find(cn => cn.id === classeNivelAtual)?.classe} (<strong className="font-black text-emerald-800 text-sm">{obterNivelFormatado(classeNivelAtual)}</strong>)
+                      </span>
+                    </div>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150">
+                      <span className="text-slate-400 block text-[9px] uppercase font-bold">Data do Interstício</span>
+                      <span className="font-bold text-slate-700 block">
+                        {dataUltimoEvento ? new Date(dataUltimoEvento).toLocaleDateString('pt-BR') : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Afastamentos / Adicionador de Descontos */}
+                  <div className="border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-xs text-slate-700 flex items-center gap-1">
+                        <Clock size={14} className="text-rose-500" />
+                        Histórico de Afastamentos (Art. 14)
+                      </span>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">
+                        {descontos.length} lançados
+                      </span>
+                    </div>
+
+                    {descontos.length > 0 ? (
+                      <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1 mb-3">
+                        {descontos.map((item) => (
+                          <div key={item.id} className="flex justify-between items-center bg-rose-50/40 p-2 rounded-lg border border-rose-100 text-xs">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-700 text-[11px]">
+                                Inciso {item.tipo} — {item.dias} dias de atraso
+                              </span>
+                              <span className="text-slate-500 text-[10px] italic line-clamp-1">{item.descricao}</span>
+                            </div>
+                            <button
+                              onClick={() => handleRemoverDesconto(item.id)}
+                              className="p-1 text-rose-500 hover:bg-rose-100 rounded-md transition-colors"
+                              title="Remover desconto"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mb-3 bg-slate-50/50 p-2 rounded-lg border border-dashed border-slate-200 text-center">
+                        Nenhum afastamento ou interrupção registrado na ficha do servidor.
+                      </p>
+                    )}
+
+                    {/* Formulário para simular novo desconto */}
+                    <form onSubmit={handleAdicionarDesconto} className="space-y-2 p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                      <span className="font-bold text-[10px] text-slate-600 block">Simular Novo Afastamento</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={novoDescontoTipo}
+                          onChange={(e) => setNovoDescontoTipo(e.target.value)}
+                          className="bg-white border border-slate-250 rounded p-1 text-[11px] focus:outline-hidden"
+                        >
+                          <option value="I">Inciso I - Outro Cargo</option>
+                          <option value="VI">Inciso VI - Suspensão</option>
+                          <option value="VII">Inciso VII - Licença s/ Venc.</option>
+                          <option value="VIII">Inciso VIII - Falta Injustificada</option>
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Dias"
+                          value={novoDescontoDias}
+                          onChange={(e) => setNovoDescontoDias(e.target.value)}
+                          className="bg-white border border-slate-250 rounded p-1 text-[11px] focus:outline-hidden"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full py-1 bg-slate-800 text-white font-semibold rounded text-[10px] hover:bg-slate-900 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Plus size={10} /> Simular Prorrogação
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Resultados / Painel de Análise (Col 7) */}
+            <div className="lg:col-span-7 flex flex-col gap-6">
+              
+              {!docenteSelecionado ? (
+                <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-8 text-center flex flex-col items-center justify-center min-h-[450px]">
+                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-4">
+                    <User size={32} />
+                  </div>
+                  <h3 className="font-bold text-xl text-slate-700">Aguardando Consulta</h3>
+                  <p className="text-sm text-slate-500 max-w-sm mt-2">
+                    Insira o nome de um docente ou o seu SIAPE na barra de buscas ao lado para carregar os dados e prever a data exata da progressão.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  
+                  {/* Resultado Geral do Cálculo */}
+                  <div className={`bg-white rounded-2xl shadow-xs border transition-all ${resultado?.bloqueadoFaltaRequisitos ? 'border-amber-300 ring-2 ring-amber-100' : 'border-emerald-200 ring-2 ring-emerald-50'}`}>
+                    
+                    <div className={`p-4 rounded-t-2xl flex items-center justify-between text-white ${resultado?.bloqueadoFaltaRequisitos ? 'bg-amber-600' : 'bg-gradient-to-r from-emerald-800 to-green-700'}`}>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle size={20} />
+                        <span className="text-sm font-bold uppercase tracking-wider">Cálculo de Progressão Executado</span>
+                      </div>
+                      <span className="text-[10px] uppercase font-bold bg-white/20 px-2 py-0.5 rounded">
+                        SISPRA-EBTT
+                      </span>
+                    </div>
+
+                    <div className="p-6">
+                      
+                      {/* Situação Atual x Próximo Nível */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Situação de Origem</span>
+                          <span className="text-base font-extrabold text-slate-700 block">
+                            {resultado?.classeAtual}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                            Nível <strong className="font-black text-slate-800 text-sm">{resultado ? resultado.codigoFormatado : ''}</strong> — {resultado?.cargoAtual}
+                          </span>
+                        </div>
+
+                        {resultado?.ultimoNivel ? (
+                          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                            <span className="text-[10px] text-emerald-600 font-bold uppercase block mb-1">Status Carreira</span>
+                            <span className="text-sm font-extrabold text-emerald-800 block">
+                              Professor Titular (<strong className="font-extrabold">{resultado ? resultado.codigoFormatado : ''}</strong>)
+                            </span>
+                            <p className="text-xs text-emerald-700 mt-1">
+                              Docente já alcançou o topo da carreira EBTT.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className={`p-4 rounded-xl border ${resultado?.bloqueadoFaltaRequisitos ? 'bg-amber-50/50 border-amber-200' : 'bg-emerald-50/40 border-emerald-200'}`}>
+                            <span className="text-[10px] text-emerald-600 font-bold uppercase block mb-1">Alvo Próxima Progressão</span>
+                            <span className="text-base font-extrabold text-slate-800 block">
+                              {resultado?.proximaClasse}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                              Nível <strong className="font-black text-emerald-700 text-sm">{resultado ? resultado.proximoCodigoFormatado : ''}</strong> — {resultado?.proximoCargo}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* DATA DA PROGRESSÃO CALCULADA */}
+                      {!resultado?.ultimoNivel && (
+                        <div className="mb-6">
+                          <div className="bg-slate-950 text-white rounded-xl p-5 relative overflow-hidden shadow-sm">
+                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4">
+                              <Calendar size={130} />
+                            </div>
+
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold block mb-1">
+                              Data Limite do Interstício Funcional
+                            </span>
+                            <span className="text-2xl font-black text-emerald-400 block tracking-tight">
+                              {resultado?.dataFinalFormatada}
+                            </span>
+
+                            {/* Descontos aplicados */}
+                            {resultado?.totalDiasDesconto > 0 && (
+                              <div className="mt-3 flex items-center gap-2 text-xs bg-rose-950/40 border border-rose-700/50 text-rose-300 p-2 rounded-md">
+                                <AlertTriangle size={14} className="shrink-0" />
+                                <span>
+                                  Data prorrogada em <strong>{resultado?.totalDiasDesconto} dias</strong> devidos aos afastamentos da ficha.
+                                </span>
+                              </div>
+                            )}
+
+                            {resultado?.bloqueadoFaltaRequisitos && (
+                              <div className="mt-3 flex items-center gap-2 text-xs bg-amber-950/40 border border-amber-700/50 text-amber-300 p-2.5 rounded-md">
+                                <AlertTriangle size={14} className="shrink-0" />
+                                <span>
+                                  A promoção para Titular requer o Título de Doutor. Atualmente pendente na base.
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Requisitos Legais Requeridos */}
+                      {!resultado?.ultimoNivel && (
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-600 mb-3 flex items-center gap-1.5">
+                            <Info size={14} className="text-slate-400" />
+                            Exigências Oficiais ({resultado?.artigoAplicado})
+                          </h4>
+                          <ul className="space-y-2">
+                            {resultado?.requisitosEspeciais.map((req, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5"></div>
+                                <span className="leading-relaxed">{req}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Botão de Agendamento Rápido */}
+                      {!resultado?.ultimoNivel && (
+                        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between p-4 bg-emerald-50 rounded-xl border border-emerald-150 gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="bg-emerald-100 text-emerald-800 p-2 rounded-lg shrink-0">
+                              <Bell size={20} />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-xs text-emerald-900">Configurar Alerta por E-mail</h4>
+                              <p className="text-[11px] text-emerald-700 leading-relaxed">
+                                Notificaremos você no dia <strong>{resultado?.dataAlertaCurta}</strong> (5 dias antes) com o formulário oficial.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setAbaAtiva('simulador_email');
+                              setReceberAlerta(true);
+                            }}
+                            className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                          >
+                            <Mail size={14} />
+                            Ativar Alerta
+                          </button>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+
+                  {/* Linha do Tempo da Carreira */}
+                  <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6">
+                    <h3 className="font-bold text-slate-800 text-base mb-4 flex items-center gap-2">
+                      <Clock size={18} className="text-slate-400" />
+                      Histórico e Próxima Linha de Tempo
+                    </h3>
+                    
+                    <div className="relative pl-6 border-l-2 border-slate-100 space-y-6">
+                      
+                      <div className="relative">
+                        <span className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-slate-300 border-4 border-white"></span>
+                        <div className="text-xs">
+                          <span className="text-slate-400 font-semibold">
+                            {dataUltimoEvento ? new Date(dataUltimoEvento).toLocaleDateString('pt-BR') : ''}
+                          </span>
+                          <h4 className="font-bold text-slate-700 text-sm mt-0.5">Último Evento Homologado</h4>
+                          <p className="text-slate-500 text-[11px]">
+                            Início do ciclo aquisitivo do nível <strong className="font-extrabold text-slate-700">{resultado ? resultado.codigoFormatado : ''}</strong>.
+                          </p>
+                        </div>
+                      </div>
+
+                      {!resultado?.ultimoNivel && (
+                        <div className="relative bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+                          <span className="absolute -left-[31px] top-4.5 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white"></span>
+                          <div className="text-xs">
+                            <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+                              <Bell size={12} />
+                              {resultado?.dataAlertaCurta} (Alerta de 5 dias)
+                            </span>
+                            <h4 className="font-bold text-emerald-900 text-sm mt-0.5">Disparo de E-mail de Apoio</h4>
+                            <p className="text-emerald-700 mt-0.5 leading-relaxed text-[11px]">
+                              Recepção do formulário padrão para progressão para o nível <strong className="font-black">{resultado ? resultado.proximoCodigoFormatado : ''}</strong>.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {!resultado?.ultimoNivel && (
+                        <div className="relative">
+                          <span className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-slate-800 border-4 border-white"></span>
+                          <div className="text-xs">
+                            <span className="text-slate-900 font-black">{resultado?.dataFinalCurta}</span>
+                            <h4 className="font-bold text-slate-800 text-sm mt-0.5">Fim do Ciclo Regulamentar</h4>
+                            <p className="text-slate-500 text-[11px]">
+                              Data limite oficial para homologar a promoção/progressão para o nível <strong className="font-black text-slate-700">{resultado ? resultado.proximoCodigoFormatado : ''}</strong>.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+          </div>
+        )}
+
+        {/* ABA: PAINEL ADMINISTRATIVO (CADASTRO DO DOCENTE) */}
+        {abaAtiva === 'admin_banco' && isAdmin && (
+          <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
+            
+            {/* Seção Informativa */}
+            <div className="bg-emerald-50/70 p-5 border border-emerald-200 rounded-2xl flex items-start gap-4">
+              <div className="p-3 bg-emerald-100 rounded-xl text-emerald-800 shrink-0">
+                <Database size={24} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-emerald-900 text-base">Gerenciamento da Base de Dados de Servidores</h3>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  Cadastre novos servidores docentes, configure suas datas de início de ciclo ou exclua registros diretamente na memória da plataforma. Ao adicionar um docente aqui, ele ficará disponível imediatamente para pesquisa e geração de alertas de progressão na aba <strong>"Minha Progressão"</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              {/* Formulário de Cadastro de Docente (Col 5) */}
+              <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs self-start">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                  <PlusCircle className="text-emerald-700" size={20} />
+                  <span className="font-bold text-sm text-slate-700">Novo Cadastro Docente</span>
+                </div>
+
+                <form onSubmit={handleCadastrarDocente} className="space-y-4 text-xs">
+                  {/* Nome Completo */}
+                  <div>
+                    <label className="block font-bold text-slate-600 mb-1">Nome Completo do Docente *</label>
+                    <input
+                      type="text"
+                      required
+                      value={cadNome}
+                      onChange={(e) => setCadNome(e.target.value)}
+                      placeholder="Ex: Carlos Eduardo Souza Silva"
+                      className="w-full px-3.5 py-2 rounded-lg border border-slate-200 focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-xs focus:outline-hidden"
+                    />
+                  </div>
+
+                  {/* Matrícula SIAPE */}
+                  <div>
+                    <label className="block font-bold text-slate-600 mb-1">Matrícula SIAPE (7 dígitos) *</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={7}
+                      value={cadSiape}
+                      onChange={(e) => setCadSiape(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Ex: 1543289"
+                      className="w-full px-3.5 py-2 rounded-lg border border-slate-200 focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-xs focus:outline-hidden"
+                    />
+                  </div>
+
+                  {/* Classe e Nível */}
+                  <div>
+                    <label className="block font-bold text-slate-600 mb-1">Classe e Nível Atual *</label>
+                    <select
+                      value={cadClasseNivel}
+                      onChange={(e) => setCadClasseNivel(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-xs focus:outline-hidden"
+                    >
+                      {CLASSES_NIVEIS.map(cn => (
+                        <option key={cn.id} value={cn.id}>
+                          {cn.classe} — {cn.nivel} ({cn.codigoFormatado})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Data do Último Evento */}
+                  <div>
+                    <label className="block font-bold text-slate-600 mb-1">Início do Ciclo (Última portaria de progressão) *</label>
+                    <input
+                      type="date"
+                      required
+                      value={cadDataEvento}
+                      onChange={(e) => setCadDataEvento(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-1 focus:ring-emerald-500 bg-slate-50 text-xs focus:outline-hidden"
+                    />
+                  </div>
+
+                  {/* Possui Doutorado */}
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={cadDoutorado}
+                        onChange={(e) => setCadDoutorado(e.target.checked)}
+                        className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
+                      />
+                      <span className="font-bold text-slate-700">Este servidor possui Doutorado (Exigência p/ Titular)</span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg transition-colors text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Plus size={14} /> Cadastrar Servidor
+                  </button>
+                </form>
+              </div>
+
+              {/* Tabela de Visualização e Exclusão (Col 7) */}
+              <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                  <span className="font-bold text-sm text-slate-700">Servidores Registrados Ativamente</span>
+                  <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-md">
+                    {bancoDocentes.length} servidores
+                  </span>
+                </div>
+
+                {bancoDocentes.length > 0 ? (
+                  <div className="overflow-x-auto text-xs">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold">
+                          <th className="p-2.5">Nome / SIAPE</th>
+                          <th className="p-2.5">Classe/Nível</th>
+                          <th className="p-2.5">Data Início</th>
+                          <th className="p-2.5 text-center">Doutorado</th>
+                          <th className="p-2.5 text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bancoDocentes.map((docente) => (
+                          <tr key={docente.siape} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                            <td className="p-2.5 font-medium">
+                              <span className="font-bold text-slate-800 block leading-tight">{docente.nome}</span>
+                              <span className="font-mono text-slate-400 text-[10px]">SIAPE: {docente.siape}</span>
+                            </td>
+                            <td className="p-2.5 text-slate-600">
+                              Nível <strong className="font-black text-emerald-800">{obterNivelFormatado(docente.classeNivelAtual)}</strong>
+                            </td>
+                            <td className="p-2.5 text-slate-600">
+                              {new Date(docente.dataUltimoEvento).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="p-2.5 text-center">
+                              {docente.possuiDoutorado ? (
+                                <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-bold">Sim</span>
+                              ) : (
+                                <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.2 rounded font-bold">Não</span>
+                              )}
+                            </td>
+                            <td className="p-2.5 text-right">
+                              <button
+                                onClick={() => handleExcluirDocenteDoBanco(docente.siape)}
+                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors inline-flex"
+                                title="Excluir docente da base de dados"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-xl">
+                    <Database size={36} className="mx-auto text-slate-300 mb-2" />
+                    <span className="text-xs text-slate-400 block font-medium">Nenhum docente cadastrado na base de dados.</span>
+                    <span className="text-[10px] text-slate-400">Adicione novos no painel ao lado para testar.</span>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ABA: LEGISLAÇÃO */}
+        {abaAtiva === 'regulamento' && (
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 max-w-4xl mx-auto">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+              <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg">
+                <FileText size={24} />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-xl text-slate-800">Diretrizes Legais de Progressão</h2>
+                <p className="text-sm text-slate-500">Regras oficiais de promoção de carreira</p>
+              </div>
+            </div>
+
+            <div className="space-y-6 text-slate-700 text-sm leading-relaxed">
+              
+              <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                <h3 className="font-bold text-emerald-900 text-sm mb-2 flex items-center gap-1.5">
+                  <Info size={16} />
+                  Funcionamento dos Ciclos
+                </h3>
+                <p className="text-xs text-emerald-800">
+                  A progressão funcional é regida pelos interstícios de 24 meses padrão, com exceção de transições específicas de classe, acrescidos de eventuais dias de suspensão legal previstos no artigo 14.
+                </p>
+              </div>
+
+              {/* Seção Artigo 5 */}
+              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-widest block mb-1">Artigo 5º - Padrão Geral</span>
+                <h4 className="font-bold text-slate-800 mb-2">Requisitos para qualquer progressão:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
+                  <li><strong>Interstício:</strong> 24 meses em cada nível.</li>
+                  <li><strong>Avaliação:</strong> Aprovação em avaliação individual de desempenho.</li>
+                </ul>
+              </div>
+
+              {/* Seção Artigo 6 */}
+              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-widest block mb-1">Artigo 6º - Promoção A para B</span>
+                <h4 className="font-bold text-slate-800 mb-2">Requisitos para transição especial:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
+                  <li><strong>Interstício:</strong> 36 meses no nível <strong className="font-bold">A-2</strong>.</li>
+                  <li><strong>Avaliação:</strong> Aprovação em avaliação individual de desempenho.</li>
+                </ul>
+              </div>
+
+              {/* Seção Artigo 7 */}
+              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-widest block mb-1">Artigo 7º - Promoção B para C</span>
+                <h4 className="font-bold text-slate-800 mb-2">Requisitos para transição:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
+                  <li><strong>Interstício:</strong> 24 meses no nível <strong className="font-bold">B-4</strong>.</li>
+                  <li><strong>Avaliação:</strong> Aprovação em avaliação individual de desempenho.</li>
+                </ul>
+              </div>
+
+              {/* Seção Artigo 8 */}
+              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-widest block mb-1">Artigo 8º - Professor Titular (Classe E)</span>
+                <h4 className="font-bold text-slate-800 mb-2">Requisitos especiais para Titular:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
+                  <li><strong>Título:</strong> Doutoramento obrigatório.</li>
+                  <li><strong>Interstício:</strong> 24 meses no nível <strong className="font-bold">D-4</strong>.</li>
+                  <li><strong>Aprovações:</strong> Avaliação funcional + Memorial ou defesa de tese inédita.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ABA: SIMULADOR DE E-MAIL */}
+        {abaAtiva === 'simulador_email' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6">
+              <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
+                <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg">
+                  <Mail size={24} />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-xl text-slate-800">Serviço de Alertas por E-mail</h2>
+                  <p className="text-sm text-slate-500">Agendamento de lembrete com documentos em anexo</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <div className="md:col-span-7 space-y-3">
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    Evite atrasos financeiros por prazos expirados. Cadastrando seu e-mail institucional, o sistema envia instruções no momento correto de requisição da sua progressão.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Sua notificação é disparada <strong>5 dias antes</strong> do fim do interstício, guiando o protocolo no sistema interno.
+                  </p>
+                </div>
+
+                <div className="md:col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <form onSubmit={handleConfigurarAlerta} className="space-y-3">
+                    <span className="text-xs font-extrabold text-slate-700 block uppercase">Configurar Alerta</span>
+                    
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">E-mail para Recebimento</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="nome.servidor@instituto.edu.br"
+                        value={emailAlerta}
+                        onChange={(e) => {
+                          setEmailAlerta(e.target.value);
+                          setReceberAlerta(true);
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2 bg-emerald-700 text-white text-xs font-bold rounded-lg hover:bg-emerald-800 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Bell size={14} />
+                      {alertaConfigurado ? 'Alerta Ativo ✓' : 'Ativar Lembrete'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {receberAlerta && docenteSelecionado && (
+              <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+                <div className="bg-slate-100 px-4 py-2 text-slate-500 text-xs font-mono flex items-center justify-between border-b border-slate-200">
+                  <span>Visualização de E-mail Automático</span>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[9px]">
+                    DISPARO EM {resultado ? resultado.dataAlertaCurta : ''}
+                  </span>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="border-b border-slate-100 pb-3 text-xs space-y-1">
+                    <div><span className="font-bold text-slate-600">De:</span> assessoria.carreira@instituto.edu.br</div>
+                    <div><span className="font-bold text-slate-600">Para:</span> {emailAlerta || 'servidor@instituto.edu.br'}</div>
+                    <div><span className="font-bold text-slate-600">Assunto:</span> ⚠️ Alerta de Progressão Funcional Docente — {nome}</div>
+                  </div>
+
+                  <div className="space-y-3 text-xs leading-relaxed text-slate-700">
+                    <p className="font-bold text-slate-800">Prezado(a) docente {nome},</p>
+                    
+                    <p>
+                      Informamos que em <strong>5 dias</strong> (vencimento em <strong>{resultado ? resultado.dataFinalCurta : ''}</strong>) seu interstício funcional para progressão na carreira EBTT será completado.
+                    </p>
+
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold block">CLASSE / NÍVEL ATUAL</span>
+                        <span className="text-slate-700 font-normal">
+                          {resultado ? resultado.classeAtual : ''} (<strong className="font-black text-emerald-800">{resultado ? resultado.codigoFormatado : ''}</strong>)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold block">PRÓXIMO ALVO</span>
+                        <span className="text-slate-700 font-normal">
+                          {resultado ? resultado.proximaClasse : ''} (<strong className="font-black text-emerald-800">{resultado ? resultado.proximoCodigoFormatado : ''}</strong>)
+                        </span>
+                      </div>
+                    </div>
+
+                    <p>
+                      Para que o processo de progressão ocorra sem atrasos, solicitamos que realize o preenchimento do **Formulário de Avaliação Individual de Desempenho** em anexo e inicie o protocolo.
+                    </p>
+
+                    {/* Documentos Anexos */}
+                    <div className="mt-4 p-4 border border-slate-200 rounded-lg bg-emerald-50/20">
+                      <span className="text-xs font-bold text-emerald-800 block mb-2">Anexos prontos para Download:</span>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex-1 bg-white p-3 rounded border border-slate-200 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="text-emerald-700" size={24} />
+                            <div>
+                              <span className="font-bold text-slate-700 text-xs block">Formulário_Avaliação_Desempenho.docx</span>
+                              <span className="text-[10px] text-slate-400">Word editável com checklist</span>
+                            </div>
+                          </div>
+                          <button 
+                            type="button" 
+                            onClick={() => showToast('Formulário de Avaliação Baixado.')}
+                            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-md transition-colors"
+                          >
+                            <Download size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+      </main>
+
+      {/* Rodapé institucional padrão */}
+      <footer className="bg-slate-900 text-slate-400 text-xs py-8 mt-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
+          <p className="font-bold text-slate-300">SISPRA-EBTT — SISTEMA INTEGRADO DE PROGRESSÃO FUNCIONAL</p>
+          <div className="max-w-md mx-auto text-[11px] text-slate-500 leading-relaxed">
+            Desenvolvido em conformidade com as regras vigentes da Carreira Docente EBTT. Os dados apresentados correspondem à ficha de cadastro integrada no banco de dados corporativo do servidor.
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  );
+}
